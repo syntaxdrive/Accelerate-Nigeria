@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import an from '../assets/an.png';
 import { useAuth } from '../utils/auth.js';
+import { useCarContext } from '../context/CarContext.jsx';
 import Footer from '../components/Footer';
+import Navbar from '../components/NavBar.jsx';
 
 export default function ListYourCar() {
+    const { user } = useAuth();
+    const { addCarListingRequest } = useCarContext();
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         // Owner Details
         ownerName: '',
@@ -81,71 +86,69 @@ export default function ListYourCar() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (currentStep !== 4) {
+            nextStep();
+            return;
+        }
+        
         setIsSubmitting(true);
         
-        // Create car listing request
-        const requestId = `CAR${Date.now()}`;
-        const carListingRequest = {
-            id: requestId,
-            type: 'car_listing', // Distinguish from rental requests
-            status: 'pending',
-            dateSubmitted: new Date().toISOString(),
-            owner: {
-                name: formData.ownerName,
-                email: formData.email,
-                phone: formData.phone,
-                address: formData.address,
-                city: formData.city,
-                state: formData.state
-            },
-            car: {
-                make: formData.carMake,
-                model: formData.carModel,
-                year: parseInt(formData.carYear),
-                licensePlate: formData.licensePlate,
-                color: formData.color,
-                mileage: parseInt(formData.mileage),
-                transmission: formData.transmission,
-                fuelType: formData.fuelType,
-                seats: parseInt(formData.seats),
-                category: formData.category,
-                description: formData.description,
-                features: formData.features,
+        try {
+            console.log('📝 Submitting car listing request via CarContext...', formData);
+            
+            // Submit car listing request via CarContext - this will auto-sync to admin
+            const result = addCarListingRequest({
+                owner: {
+                    name: formData.ownerName,
+                    email: formData.email || user?.email,
+                    phone: formData.phone || user?.phone,
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state
+                },
+                car: {
+                    make: formData.carMake,
+                    model: formData.carModel,
+                    year: parseInt(formData.carYear),
+                    licensePlate: formData.licensePlate,
+                    color: formData.color,
+                    mileage: parseInt(formData.mileage),
+                    transmission: formData.transmission,
+                    fuelType: formData.fuelType,
+                    seats: parseInt(formData.seats),
+                    category: formData.category,
+                    description: formData.description,
+                    features: formData.features
+                },
+                pricing: {
+                    dailyRate: parseInt(formData.dailyRate),
+                    weeklyRate: parseInt(formData.weeklyRate) || (parseInt(formData.dailyRate) * 6),
+                    monthlyRate: parseInt(formData.monthlyRate) || (parseInt(formData.dailyRate) * 25)
+                },
+                images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400'],
+                availability: formData.availability,
+                deliveryOption: formData.deliveryOption,
                 insuranceValid: formData.insuranceValid,
                 roadWorthyValid: formData.roadWorthyValid
-            },
-            pricing: {
-                dailyRate: parseInt(formData.dailyRate),
-                weeklyRate: formData.weeklyRate ? parseInt(formData.weeklyRate) : null,
-                monthlyRate: formData.monthlyRate ? parseInt(formData.monthlyRate) : null,
-                availability: formData.availability,
-                deliveryOption: formData.deliveryOption
-            },
-            images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400'],
-            message: null
-        };
-        
-        // Save to localStorage (same storage as rental requests)
-        const existingRequests = JSON.parse(localStorage.getItem('rentalRequests') || '[]');
-        const updatedRequests = [...existingRequests, carListingRequest];
-        localStorage.setItem('rentalRequests', JSON.stringify(updatedRequests));
-        
-        console.log('✅ Car listing request saved:', carListingRequest);
-        
-        setTimeout(() => {
-            alert('Your car listing has been submitted for approval! You will receive an email notification once it\'s reviewed.');
-            setIsSubmitting(false);
-            // Reset form
-            setFormData({
-                ownerName: '', email: '', phone: '', address: '', city: '', state: '',
-                carMake: '', carModel: '', carYear: '', licensePlate: '', color: '', mileage: '',
-                transmission: '', fuelType: '', seats: '', category: '', dailyRate: '',
-                weeklyRate: '', monthlyRate: '', availability: '', deliveryOption: false,
-                description: '', features: [], insuranceValid: false, roadWorthyValid: false,
-                images: []
             });
-            setCurrentStep(1);
-        }, 2000);
+            
+            if (result.success) {
+                alert(` Car listing request submitted successfully!\n\nRequest ID: ${result.requestId}\n\nYour car listing will be reviewed by our team and you'll be notified once approved. You can track the status in "My Requests" page.`);
+                console.log(' Car listing request submitted:', result);
+                
+                // Navigate to My Requests page
+                navigate('/my-requests');
+            } else {
+                throw new Error(result.message || 'Failed to submit request');
+            }
+            
+        } catch (error) {
+            console.error(' Error submitting car listing request:', error);
+            alert(` Error submitting car listing request: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const nextStep = () => setCurrentStep(prev => prev + 1);
@@ -158,142 +161,8 @@ export default function ListYourCar() {
     ];
 
     return (
-        <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen">
-            <header className="sticky top-0 z-50 bg-white shadow-sm">
-                <div className="px-4 mx-auto sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16 lg:h-20">
-                        <div className="flex-shrink-0">
-                            <Link to="/" className="flex">
-                                <img className="w-auto h-40 pt-10" src={an} alt="Accelerate Nigeria" />
-                            </Link>
-                        </div>
-
-                        <button 
-                            type="button" 
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="inline-flex p-1 text-black transition-all duration-200 border border-black lg:hidden focus:bg-gray-100 hover:bg-gray-100"
-                        >
-                            <svg className={`w-6 h-6 ${isMobileMenuOpen ? 'hidden' : 'block'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                            <svg className={`w-6 h-6 ${isMobileMenuOpen ? 'block' : 'hidden'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-
-                        <div className="hidden ml-auto lg:flex lg:items-center lg:space-x-1">
-                            <div className="flex items-center space-x-1 bg-white p-1 rounded-lg shadow-sm">
-                                <Link to="/" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Home">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Home</span>
-                                    </div>
-                                </Link>
-                                <Link to="/solutions" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Solutions">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Solutions</span>
-                                    </div>
-                                </Link>
-                                <Link to="/rent-cars" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Rent a Car">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Rent</span>
-                                    </div>
-                                </Link>
-                                <Link to="/list-your-car" className="group relative flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-green-600 text-white shadow-sm" title="List Your Car">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">List</span>
-                                    </div>
-                                </Link>
-                                <Link to="/my-requests" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="My Requests">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Requests</span>
-                                    </div>
-                                </Link>
-                                <Link to="/partner-with-us" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Partner with us">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Partner</span>
-                                    </div>
-                                </Link>
-                                <Link to="/contact-us" className="group flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Contact Us">
-                                    <div className="flex flex-col items-center space-y-1">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                        </svg>
-                                        <span className="text-xs hidden xl:block">Contact</span>
-                                    </div>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Mobile Menu */}
-                    {isMobileMenuOpen && (
-                        <div className="lg:hidden">
-                            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
-                                <Link to="/" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                    </svg>
-                                    Home
-                                </Link>
-                                <Link to="/solutions" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                    </svg>
-                                    Solutions
-                                </Link>
-                                <Link to="/rent-cars" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                    </svg>
-                                    Rent a Car
-                                </Link>
-                                <Link to="/list-your-car" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md border-l-4 border-green-500">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    List Your Car
-                                </Link>
-                                <Link to="/my-requests" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                                    </svg>
-                                    My Requests
-                                </Link>
-                                <Link to="/partner-with-us" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    Partner with us
-                                </Link>
-                                <Link to="/contact-us" className="flex items-center px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    Contact Us
-                                </Link>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </header>
+        <div>
+      <Navbar />
 
             <section className="py-10 sm:py-16 lg:py-24">
                 <div className="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">

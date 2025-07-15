@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import an from '../assets/an.png';
 import Footer from '../components/Footer';
+import Navbar from '../components/NavBar';
 
 export default function Register() {
     const navigate = useNavigate();
@@ -81,21 +82,20 @@ export default function Register() {
         }
 
         // Age validation (must be 18+)
-        if (formData.dateOfBirth) {
-            const today = new Date();
-            const birthDate = new Date(formData.dateOfBirth);
-            const age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            
-            if (age < 18) {
-                newErrors.dateOfBirth = 'You must be at least 18 years old to register';
-            }
-        }
-
+      if (formData.dateOfBirth) {
+    const today = new Date();
+    const birthDate = new Date(formData.dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    
+    if (age < 18) {
+        newErrors.dateOfBirth = 'You must be at least 18 years old to register';
+    }
+}
         // Terms and conditions
         if (!formData.agreeToTerms) {
             newErrors.agreeToTerms = 'You must agree to the terms and conditions';
@@ -151,58 +151,9 @@ export default function Register() {
     ];
 
     return (
-        <div className="bg-gradient-to-b from-green-50 to-green-100 min-h-screen">
-            <header className="sticky top-0 z-50 bg-white shadow-sm">
-                <div className="px-4 mx-auto sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16 lg:h-20">
-                        <div className="flex-shrink-0">
-                            <Link to="/" className="flex">
-                                <img className="w-auto h-40 pt-10" src={an} alt="Accelerate Nigeria" />
-                            </Link>
-                        </div>
-
-                        <button 
-                            type="button" 
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="inline-flex p-1 text-black transition-all duration-200 border border-black lg:hidden focus:bg-gray-100 hover:bg-gray-100"
-                        >
-                            <svg className={`w-6 h-6 ${isMobileMenuOpen ? 'hidden' : 'block'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                            <svg className={`w-6 h-6 ${isMobileMenuOpen ? 'block' : 'hidden'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-
-                        <div className="hidden ml-auto lg:flex lg:items-center lg:justify-center lg:space-x-10">
-                            <Link to="/" className="text-base font-semibold text-black transition-all duration-200 hover:text-opacity-80">Home</Link>
-                            <Link to="/solutions" className="text-base font-semibold text-black transition-all duration-200 hover:text-opacity-80">Solutions</Link>
-                            <Link to="/rent-cars" className="text-base font-semibold text-black transition-all duration-200 hover:text-opacity-80">Rent a Car</Link>
-                            <Link to="/partner-with-us" className="text-base font-semibold text-black transition-all duration-200 hover:text-opacity-80">Partner with us</Link>
-                            <Link to="/contact-us" className="text-base font-semibold text-black transition-all duration-200 hover:text-opacity-80">Contact Us</Link>
-                            <div className="w-px h-5 bg-black/20"></div>
-                            <Link to="/register" className="inline-flex items-center justify-center px-5 py-2.5 text-base font-semibold text-white bg-green-600 hover:bg-green-700 transition-all duration-200 rounded-lg">Register</Link>
-                        </div>
-                    </div>
-
-                    {/* Mobile Menu */}
-                    {isMobileMenuOpen && (
-                        <div className="lg:hidden">
-                            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
-                                <Link to="/" className="block px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">Home</Link>
-                                <Link to="/solutions" className="block px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">Solutions</Link>
-                                <Link to="/rent-cars" className="block px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">Rent a Car</Link>
-                                <Link to="/partner-with-us" className="block px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">Partner with us</Link>
-                                <Link to="/contact-us" className="block px-3 py-2 text-base font-medium text-black hover:bg-gray-100 rounded-md">Contact Us</Link>
-                                <div className="border-t border-gray-200 pt-2 mt-2">
-                                    <Link to="/register" className="block px-3 py-2 text-base font-medium text-white bg-green-600 hover:bg-green-700 rounded-md border-l-4 border-green-500">Register</Link>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </header>
-
+        <div>
+            // Header
+      <Navbar />
             <section className="py-10 sm:py-16 lg:py-24">
                 <div className="px-4 mx-auto max-w-3xl sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
