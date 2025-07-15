@@ -12,7 +12,6 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "Homepage": "https://github.com/syntaxdrive/OYNET.git",
     "@tailwindcss/postcss": "^4.1.11",
     "postcss": "^8.5.6",
     "react": "^19.1.0",
